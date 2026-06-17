@@ -1,0 +1,11 @@
+{
+  "trailingSlash": true,
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "robertbryk.pl" }],
+      "destination": "https://www.robertbryk.pl/$1",
+      "permanent": true
+    }
+  ]
+}

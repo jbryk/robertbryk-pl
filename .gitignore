@@ -1,0 +1,18 @@
+# OS / edytory
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.idea/
+.vscode/
+
+# Sekrety / lokalne
+.env
+.env.*
+*.local
+
+# Vercel
+.vercel/
+
+# Zależności (gdyby kiedyś doszły)
+node_modules/
