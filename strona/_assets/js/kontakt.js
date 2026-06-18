@@ -29,7 +29,7 @@
 
   const val = (sel) => (form.querySelector(sel)?.value || "").trim();
 
-  function showMsg(text, type) {
+  function showMsg(text, type, isHtml) {
     let el = form.querySelector(".form-msg");
     if (!el) {
       el = document.createElement("div");
@@ -38,8 +38,8 @@
       form.appendChild(el);
     }
     el.className = "form-msg " + type;
-    el.textContent = text;
-    if (type === "success") setTimeout(() => el.remove(), 8000);
+    if (isHtml) el.innerHTML = text; else el.textContent = text;
+    if (type === "success") setTimeout(() => el.remove(), 12000);
   }
 
   // Leniwe ładowanie SDK Supabase tylko gdy backend skonfigurowany
@@ -73,9 +73,6 @@
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
 
-    // Honeypot — boty wypełniają ukryte pole "company"
-    if (val('input[name="company"]')) return;
-
     const data = {
       name:    val("#cf-name"),
       email:   val("#cf-email"),
@@ -100,10 +97,15 @@
 
     const btn = form.querySelector('[type="submit"]');
 
-    // ── FALLBACK: brak skonfigurowanego backendu → otwórz pocztę ──
+    // ── FALLBACK: brak skonfigurowanego backendu → otwórz pocztę + jasny komunikat ──
     if (!configured) {
-      window.location.href = buildMailto(data);
-      showMsg("Otworzyliśmy Twój program pocztowy z gotową wiadomością. Jeśli się nie otworzył, napisz na " + FALLBACK_EMAIL + ".", "success");
+      const link = buildMailto(data);
+      window.location.href = link;
+      showMsg(
+        'Dokończ wysyłkę w swoim programie pocztowym (próbowaliśmy go otworzyć). ' +
+        'Jeśli się nie otworzył, kliknij: <a href="' + link + '" style="color:inherit;text-decoration:underline;font-weight:700;">napisz na ' + FALLBACK_EMAIL + '</a> — treść jest już przygotowana.',
+        "success", true
+      );
       return;
     }
 
