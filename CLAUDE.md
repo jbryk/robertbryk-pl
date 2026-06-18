@@ -7,8 +7,9 @@ do zapisu zgłoszeń i automatycznego potwierdzenia mailem.
 
 ## Architektura
 - **Frontend**: statyczny HTML/CSS/JS, bez frameworka. Katalog deployowany: `strona/`.
-- **Backend (opcjonalny)**: Supabase (tabela `submissions_kontakt` + RLS) + Resend (mail potwierdzający przez Edge Function). Pliki w `backend/` — **NIE są deployowane**.
-- Dopóki Supabase nie jest skonfigurowane, formularz działa w trybie **fallback `mailto:`** (otwiera pocztę z gotową treścią na `robert_bryk@go2.pl`).
+- **Formularz kontaktowy → e-mail przez Web3Forms** (wybrane 2026-06-17): `_assets/js/kontakt.js` wysyła zgłoszenie POST-em do Web3Forms, mail trafia na `robert_bryk@go2.pl`. Wymaga wklejenia `ACCESS_KEY` (z web3forms.com) w `kontakt.js`. Dopóki klucza brak → **fallback `mailto:`**.
+- **Uwaga:** był bug — ukryty honeypot `name="company"` był autouzupełniany przez przeglądarkę i po cichu blokował wysyłkę. Usunięty 2026-06-17.
+- Pliki `backend/` (Supabase SQL + Resend Edge Function) — **alternatywa nieużywana** przy wariancie Web3Forms; zostają na wypadek rozbudowy. NIE są deployowane.
 
 ## Dane kancelarii (zweryfikowane: CEIDG + rejestr adwokatów, 2026-06-17)
 - Nazwa: **Kancelaria Adwokacka adw. Robert Bryk**

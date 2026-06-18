@@ -1,31 +1,25 @@
 /* =====================================================================
-   kontakt.js — obsługa formularza kontaktowego
+   kontakt.js — obsługa formularza kontaktowego (Web3Forms)
    ---------------------------------------------------------------------
-   Dwa tryby działania:
-   1) BACKEND (docelowo): jeśli uzupełnisz SUPABASE_URL i SUPABASE_ANON,
-      zgłoszenie trafia do tabeli `submissions_kontakt` w Supabase,
-      a Webhook + Edge Function wysyła klientowi potwierdzenie (Resend).
-   2) FALLBACK (od razu po publikacji): dopóki Supabase nie jest
-      skonfigurowane, formularz otwiera program pocztowy z gotową treścią
-      na adres kancelarii — strona jest użyteczna natychmiast.
+   Formularz wysyła zgłoszenie przez Web3Forms — wiadomość trafia prosto
+   na skrzynkę kancelarii (robert_bryk@go2.pl). Bez serwera i bazy.
 
-   KONFIGURACJA: uzupełnij dwie wartości poniżej (z Supabase → Settings → API).
-   Klucz `sb_publishable_...` (anon) jest bezpieczny do umieszczenia we froncie.
+   KONFIGURACJA (1 krok):
+     1. Wejdź na https://web3forms.com → wpisz robert_bryk@go2.pl → "Create Access Key".
+     2. Skopiuj otrzymany Access Key i wklej poniżej w ACCESS_KEY.
+   Dopóki klucz nie jest wklejony, formularz działa w trybie awaryjnym (mailto).
    ===================================================================== */
 (function () {
   "use strict";
 
   // ── KONFIGURACJA ──
-  const SUPABASE_URL  = "https://TWOJ-PROJEKT.supabase.co";   // ← podmień
-  const SUPABASE_ANON = "sb_publishable_XXXXXXXXXXXX";          // ← podmień (anon)
+  const ACCESS_KEY   = "TWOJ-WEB3FORMS-ACCESS-KEY";   // ← wklej klucz z web3forms.com
   const FALLBACK_EMAIL = "robert_bryk@go2.pl";
 
   const form = document.getElementById("contact-form");
   if (!form) return;
 
-  const configured =
-    SUPABASE_URL.indexOf("TWOJ-PROJEKT") === -1 &&
-    SUPABASE_ANON.indexOf("XXXX") === -1;
+  const configured = ACCESS_KEY.indexOf("TWOJ-") === -1 && ACCESS_KEY.length > 16;
 
   const val = (sel) => (form.querySelector(sel)?.value || "").trim();
 
@@ -40,21 +34,6 @@
     el.className = "form-msg " + type;
     if (isHtml) el.innerHTML = text; else el.textContent = text;
     if (type === "success") setTimeout(() => el.remove(), 12000);
-  }
-
-  // Leniwe ładowanie SDK Supabase tylko gdy backend skonfigurowany
-  let dbPromise = null;
-  function getDb() {
-    if (dbPromise) return dbPromise;
-    dbPromise = new Promise((resolve, reject) => {
-      if (window.supabase) return resolve(window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON));
-      const s = document.createElement("script");
-      s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js";
-      s.onload = () => resolve(window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON));
-      s.onerror = () => reject(new Error("Nie udało się załadować Supabase SDK"));
-      document.head.appendChild(s);
-    });
-    return dbPromise;
   }
 
   function buildMailto(data) {
@@ -83,50 +62,57 @@
     const consent = form.querySelector("#cf-consent")?.checked;
 
     if (!data.name || !data.email || !data.message) {
-      showMsg("Uzupełnij imię i nazwisko, e-mail oraz wiadomość.", "error");
-      return;
+      showMsg("Uzupełnij imię i nazwisko, e-mail oraz wiadomość.", "error"); return;
     }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.email)) {
-      showMsg("Podaj poprawny adres e-mail.", "error");
-      return;
+      showMsg("Podaj poprawny adres e-mail.", "error"); return;
     }
     if (!consent) {
-      showMsg("Zaznacz zgodę na przetwarzanie danych.", "error");
-      return;
+      showMsg("Zaznacz zgodę na przetwarzanie danych.", "error"); return;
     }
 
     const btn = form.querySelector('[type="submit"]');
 
-    // ── FALLBACK: brak skonfigurowanego backendu → otwórz pocztę + jasny komunikat ──
+    // ── FALLBACK: brak klucza Web3Forms → otwórz pocztę ──
     if (!configured) {
       const link = buildMailto(data);
       window.location.href = link;
       showMsg(
         'Dokończ wysyłkę w swoim programie pocztowym (próbowaliśmy go otworzyć). ' +
-        'Jeśli się nie otworzył, kliknij: <a href="' + link + '" style="color:inherit;text-decoration:underline;font-weight:700;">napisz na ' + FALLBACK_EMAIL + '</a> — treść jest już przygotowana.',
+        'Jeśli się nie otworzył, kliknij: <a href="' + link + '" style="color:inherit;text-decoration:underline;font-weight:700;">napisz na ' + FALLBACK_EMAIL + '</a>.',
         "success", true
       );
       return;
     }
 
-    // ── BACKEND: zapis do Supabase ──
+    // ── WYSYŁKA przez Web3Forms ──
     if (btn) { btn.disabled = true; btn.dataset.label = btn.textContent; btn.textContent = "Wysyłanie…"; }
     try {
-      const db = await getDb();
-      const { error } = await db.from("submissions_kontakt").insert({
-        name:    data.name,
-        email:   data.email,
-        phone:   data.phone || null,
-        subject: data.subject || null,
-        message: data.message,
-        status:  "new",
+      const res = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({
+          access_key: ACCESS_KEY,
+          subject: "Nowe zapytanie ze strony robertbryk.pl",
+          from_name: "Formularz robertbryk.pl",
+          replyto: data.email,
+          "Imię i nazwisko": data.name,
+          "E-mail": data.email,
+          "Telefon": data.phone || "—",
+          "Temat sprawy": data.subject || "—",
+          "Wiadomość": data.message,
+        }),
       });
-      if (error) throw error;
-      form.reset();
-      showMsg("✓ Wiadomość wysłana. Odpowiem zwykle w ciągu 1–2 dni roboczych.", "success");
+      const out = await res.json();
+      if (out.success) {
+        form.reset();
+        showMsg("✓ Wiadomość wysłana. Odpowiem zwykle w ciągu 1–2 dni roboczych.", "success");
+      } else {
+        throw new Error(out.message || "błąd Web3Forms");
+      }
     } catch (err) {
       console.error(err);
-      showMsg("Nie udało się wysłać. Spróbuj ponownie lub napisz na " + FALLBACK_EMAIL + ".", "error");
+      showMsg('Nie udało się wysłać. Spróbuj ponownie lub napisz na <a href="mailto:' + FALLBACK_EMAIL + '" style="color:inherit;text-decoration:underline;font-weight:700;">' + FALLBACK_EMAIL + '</a>.', "error", true);
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || "Wyślij wiadomość"; }
     }
