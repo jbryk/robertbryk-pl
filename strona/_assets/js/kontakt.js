@@ -13,7 +13,7 @@
   "use strict";
 
   // ── KONFIGURACJA ──
-  const ACCESS_KEY   = "TWOJ-WEB3FORMS-ACCESS-KEY";   // ← wklej klucz z web3forms.com
+  const ACCESS_KEY   = "24d7a976-28ad-4ced-9068-164f91ef8e34";   // Web3Forms (klucz publiczny — front)
   const FALLBACK_EMAIL = "robert_bryk@go2.pl";
 
   const form = document.getElementById("contact-form");
